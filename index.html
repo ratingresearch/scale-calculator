@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Calculate expected ratings across scale lengths using an adjoining-option mapping model.">
+  <title>Scale Mapping Calculator</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      background: #f1f5f9;
+      color: #334155;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    .calculator {
+      width: min(900px, 100%);
+      margin: 0 auto;
+      padding: 24px;
+      border: 1px solid #dbe3ed;
+      border-radius: 12px;
+      background: #ffffff;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.07);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      color: #1e293b;
+      font-size: clamp(1.55rem, 4vw, 2.1rem);
+    }
+
+    .intro {
+      margin: 0 0 22px;
+      color: #64748b;
+      line-height: 1.55;
+    }
+
+    .controls {
+      display: grid;
+      gap: 18px;
+      margin-bottom: 22px;
+      padding: 18px;
+      border-radius: 10px;
+      background: #f8fafc;
+    }
+
+    .rating-row,
+    .probability-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    label { font-weight: 650; }
+
+    input[type="number"] {
+      width: 92px;
+      padding: 9px 10px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      background: #ffffff;
+      color: #0f172a;
+      font: inherit;
+    }
+
+    input[type="range"] {
+      flex: 1 1 220px;
+      min-width: 180px;
+      accent-color: #2563eb;
+      cursor: pointer;
+    }
+
+    output {
+      min-width: 52px;
+      color: #2563eb;
+      font-weight: 750;
+    }
+
+    button {
+      margin-left: auto;
+      padding: 9px 17px;
+      border: 0;
+      border-radius: 6px;
+      background: #2563eb;
+      color: #ffffff;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button:hover { background: #1d4ed8; }
+    button:focus-visible,
+    input:focus-visible {
+      outline: 3px solid rgba(37, 99, 235, 0.28);
+      outline-offset: 2px;
+    }
+
+    .message {
+      display: none;
+      margin: 0 0 16px;
+      padding: 10px 12px;
+      border: 1px solid #fecaca;
+      border-radius: 6px;
+      background: #fef2f2;
+      color: #991b1b;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+    }
+
+    table {
+      width: 100%;
+      min-width: 720px;
+      border-collapse: collapse;
+      background: #ffffff;
+      text-align: center;
+    }
+
+    th,
+    td {
+      padding: 11px 9px;
+      border-right: 1px solid #e2e8f0;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    th:last-child,
+    td:last-child { border-right: 0; }
+
+    tbody tr:last-child td { border-bottom: 0; }
+
+    th {
+      background: #e2e8f0;
+      color: #475569;
+      font-size: 0.88rem;
+      white-space: nowrap;
+    }
+
+    td { font-size: 0.92rem; }
+
+    .baseline {
+      background: #eff6ff;
+      color: #1e3a8a;
+      font-weight: 700;
+    }
+
+    .note {
+      margin: 16px 0 0;
+      color: #64748b;
+      font-size: 0.88rem;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 600px) {
+      body { padding: 10px; }
+      .calculator { padding: 17px; }
+      button { width: 100%; margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+  <main class="calculator">
+    <h1>Scale Mapping Calculator</h1>
+    <p class="intro">
+      Enter a baseline average and scale length. The calculator maps the same normalized experience onto target scales from 3 to 10 points.
+    </p>
+
+    <section class="controls" aria-label="Calculator controls">
+      <div class="rating-row">
+        <label for="calc-rating">Baseline rating</label>
+        <input id="calc-rating" type="number" min="0" step="0.01" value="4.28" inputmode="decimal">
+        <span>out of</span>
+        <label for="calc-base" class="sr-only">Baseline scale length</label>
+        <input id="calc-base" type="number" min="1" step="1" value="5" inputmode="numeric">
+      </div>
+
+      <div class="probability-row">
+        <label for="calc-prob">Probability of choosing the lower adjoining option</label>
+        <input id="calc-prob" type="range" min="0" max="100" step="1" value="50">
+        <output id="prob-val" for="calc-prob">50%</output>
+        <button id="calculate-button" type="button">Calculate</button>
+      </div>
+    </section>
+
+    <p id="message" class="message" role="alert"></p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Target scale</th>
+            <th scope="col">Continuous equivalent</th>
+            <th scope="col">Adjoining options</th>
+            <th scope="col">Expected raw rating</th>
+            <th scope="col">Normalized ratio</th>
+          </tr>
+        </thead>
+        <tbody id="calc-results"></tbody>
+      </table>
+    </div>
+
+    <p class="note">
+      The baseline row retains the observed input average. For other scales, the model identifies two adjoining valid response options and calculates their probability-weighted expected value. If the continuous equivalent is an exact integer, the model pairs that value with the adjoining lower option, except at the lower boundary where no lower valid option exists.
+    </p>
+  </main>
+
+  <script>
+    const ratingInput = document.getElementById('calc-rating');
+    const baseInput = document.getElementById('calc-base');
+    const probabilityInput = document.getElementById('calc-prob');
+    const probabilityOutput = document.getElementById('prob-val');
+    const resultsBody = document.getElementById('calc-results');
+    const message = document.getElementById('message');
+    const calculateButton = document.getElementById('calculate-button');
+
+    function showMessage(text) {
+      message.textContent = text;
+      message.style.display = text ? 'block' : 'none';
+    }
+
+    function getAdjoiningOptions(continuousEquivalent, targetScale) {
+      const epsilon = 1e-9;
+      const isInteger = Math.abs(continuousEquivalent - Math.round(continuousEquivalent)) < epsilon;
+      let lower;
+      let upper;
+
+      if (isInteger) {
+        upper = Math.round(continuousEquivalent);
+        lower = upper - 1;
+      } else {
+        lower = Math.floor(continuousEquivalent);
+        upper = Math.ceil(continuousEquivalent);
+      }
+
+      lower = Math.max(1, Math.min(targetScale, lower));
+      upper = Math.max(1, Math.min(targetScale, upper));
+
+      return { lower, upper };
+    }
+
+    function calculateMappings() {
+      const rawRating = Number.parseFloat(ratingInput.value);
+      const baseScale = Number.parseInt(baseInput.value, 10);
+      const probabilityLower = Number.parseInt(probabilityInput.value, 10) / 100;
+      const probabilityUpper = 1 - probabilityLower;
+
+      probabilityOutput.textContent = `${Math.round(probabilityLower * 100)}%`;
+      showMessage('');
+
+      if (!Number.isFinite(rawRating) || !Number.isInteger(baseScale) || baseScale < 1) {
+        showMessage('Enter a valid baseline rating and a positive whole-number scale length.');
+        resultsBody.replaceChildren();
+        return;
+      }
+
+      if (rawRating < 1 || rawRating > baseScale) {
+        showMessage(`The baseline rating must be between 1 and ${baseScale}.`);
+        resultsBody.replaceChildren();
+        return;
+      }
+
+      const baselineRatio = rawRating / baseScale;
+      const fragment = document.createDocumentFragment();
+
+      for (let targetScale = 3; targetScale <= 10; targetScale += 1) {
+        const row = document.createElement('tr');
+
+        if (targetScale === baseScale) {
+          row.className = 'baseline';
+          row.innerHTML = `
+            <td>${targetScale}-point baseline</td>
+            <td>${rawRating.toFixed(3)}</td>
+            <td>Observed average</td>
+            <td>${rawRating.toFixed(2)}</td>
+            <td>${baselineRatio.toFixed(3)}</td>
+          `;
+        } else {
+          const continuousEquivalent = baselineRatio * targetScale;
+          const { lower, upper } = getAdjoiningOptions(continuousEquivalent, targetScale);
+          const expectedRaw = lower === upper
+            ? lower
+            : (lower * probabilityLower) + (upper * probabilityUpper);
+          const expectedRatio = expectedRaw / targetScale;
+          const optionsLabel = lower === upper ? `${lower}` : `${lower} and ${upper}`;
+
+          row.innerHTML = `
+            <td>${targetScale}-point</td>
+            <td>${continuousEquivalent.toFixed(3)}</td>
+            <td>${optionsLabel}</td>
+            <td>${expectedRaw.toFixed(2)}</td>
+            <td>${expectedRatio.toFixed(3)}</td>
+          `;
+        }
+
+        fragment.appendChild(row);
+      }
+
+      resultsBody.replaceChildren(fragment);
+    }
+
+    probabilityInput.addEventListener('input', calculateMappings);
+    ratingInput.addEventListener('input', calculateMappings);
+    baseInput.addEventListener('input', calculateMappings);
+    calculateButton.addEventListener('click', calculateMappings);
+    calculateMappings();
+  </script>
+</body>
+</html>
