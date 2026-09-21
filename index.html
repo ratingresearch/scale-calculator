@@ -3,52 +3,73 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Calculate expected ratings across scale lengths using an adjoining-option mapping model.">
+  <meta name="description" content="Simulate how an average 5-point rating maps onto scales from 3 to 10 points using scale-dependent adjoining-option probabilities.">
   <title>Scale Mapping Calculator</title>
   <style>
     * { box-sizing: border-box; }
+
+    :root {
+      color-scheme: light;
+      --ink: #1e293b;
+      --text: #334155;
+      --muted: #64748b;
+      --line: #dbe3ed;
+      --panel: #f8fafc;
+      --blue: #2563eb;
+      --blue-dark: #1d4ed8;
+      --blue-soft: #eff6ff;
+    }
 
     body {
       margin: 0;
       padding: 24px;
       background: #f1f5f9;
-      color: #334155;
+      color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
 
     .calculator {
-      width: min(900px, 100%);
+      width: min(1040px, 100%);
       margin: 0 auto;
       padding: 24px;
-      border: 1px solid #dbe3ed;
+      border: 1px solid var(--line);
       border-radius: 12px;
-      background: #ffffff;
+      background: #fff;
       box-shadow: 0 10px 30px rgba(15, 23, 42, 0.07);
     }
 
     h1 {
       margin: 0 0 8px;
-      color: #1e293b;
+      color: var(--ink);
       font-size: clamp(1.55rem, 4vw, 2.1rem);
     }
 
-    .intro {
-      margin: 0 0 22px;
-      color: #64748b;
+    h2 {
+      margin: 0 0 12px;
+      color: var(--ink);
+      font-size: 1rem;
+    }
+
+    .intro,
+    .note,
+    .distribution {
+      color: var(--muted);
       line-height: 1.55;
     }
+
+    .intro { margin: 0 0 20px; }
 
     .controls {
       display: grid;
       gap: 18px;
-      margin-bottom: 22px;
+      margin-bottom: 20px;
       padding: 18px;
       border-radius: 10px;
-      background: #f8fafc;
+      background: var(--panel);
     }
 
     .rating-row,
-    .probability-row {
+    .actions {
       display: flex;
       align-items: center;
       gap: 10px;
@@ -58,45 +79,79 @@
     label { font-weight: 650; }
 
     input[type="number"] {
-      width: 92px;
+      width: 100px;
       padding: 9px 10px;
       border: 1px solid #cbd5e1;
       border-radius: 6px;
-      background: #ffffff;
+      background: #fff;
       color: #0f172a;
       font: inherit;
     }
 
     input[type="range"] {
-      flex: 1 1 220px;
-      min-width: 180px;
-      accent-color: #2563eb;
+      width: 100%;
+      accent-color: var(--blue);
       cursor: pointer;
     }
 
-    output {
-      min-width: 52px;
-      color: #2563eb;
-      font-weight: 750;
-    }
-
     button {
-      margin-left: auto;
-      padding: 9px 17px;
+      padding: 9px 15px;
       border: 0;
       border-radius: 6px;
-      background: #2563eb;
-      color: #ffffff;
+      background: var(--blue);
+      color: #fff;
       font: inherit;
       font-weight: 700;
       cursor: pointer;
     }
 
-    button:hover { background: #1d4ed8; }
+    button.secondary {
+      border: 1px solid #cbd5e1;
+      background: #fff;
+      color: var(--text);
+    }
+
+    button:hover { background: var(--blue-dark); }
+    button.secondary:hover { background: #f1f5f9; }
+
     button:focus-visible,
     input:focus-visible {
       outline: 3px solid rgba(37, 99, 235, 0.28);
       outline-offset: 2px;
+    }
+
+    .probability-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+      gap: 10px;
+    }
+
+    .probability-card {
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .probability-card-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 7px;
+      font-size: 0.9rem;
+    }
+
+    .probability-card output {
+      color: var(--blue);
+      font-weight: 750;
+    }
+
+    .distribution {
+      margin: 0;
+      padding: 11px 13px;
+      border-left: 4px solid #93c5fd;
+      background: var(--blue-soft);
+      font-size: 0.92rem;
     }
 
     .message {
@@ -117,9 +172,9 @@
 
     table {
       width: 100%;
-      min-width: 720px;
+      min-width: 850px;
       border-collapse: collapse;
-      background: #ffffff;
+      background: #fff;
       text-align: center;
     }
 
@@ -132,35 +187,36 @@
 
     th:last-child,
     td:last-child { border-right: 0; }
-
     tbody tr:last-child td { border-bottom: 0; }
 
     th {
       background: #e2e8f0;
       color: #475569;
-      font-size: 0.88rem;
+      font-size: 0.84rem;
       white-space: nowrap;
     }
 
-    td { font-size: 0.92rem; }
+    td { font-size: 0.91rem; }
 
     .baseline {
-      background: #eff6ff;
+      background: var(--blue-soft);
       color: #1e3a8a;
       font-weight: 700;
     }
 
+    .higher { color: #166534; font-weight: 700; }
+    .lower { color: #991b1b; font-weight: 700; }
+    .same { color: #475569; font-weight: 700; }
+
     .note {
       margin: 16px 0 0;
-      color: #64748b;
       font-size: 0.88rem;
-      line-height: 1.5;
     }
 
     @media (max-width: 600px) {
       body { padding: 10px; }
       .calculator { padding: 17px; }
-      button { width: 100%; margin-left: 0; }
+      .actions button { flex: 1 1 150px; }
     }
   </style>
 </head>
@@ -168,23 +224,26 @@
   <main class="calculator">
     <h1>Scale Mapping Calculator</h1>
     <p class="intro">
-      Enter a baseline average and scale length. The calculator maps the same normalized experience onto target scales from 3 to 10 points.
+      Enter an observed average on a 5-point scale. The model preserves that baseline and simulates ratings on 3- through 10-point scales. Short scales default toward the higher adjoining option, while longer scales increasingly favor the lower adjoining option.
     </p>
 
     <section class="controls" aria-label="Calculator controls">
       <div class="rating-row">
-        <label for="calc-rating">Baseline rating</label>
-        <input id="calc-rating" type="number" min="0" step="0.01" value="4.28" inputmode="decimal">
-        <span>out of</span>
-        <label for="calc-base" class="sr-only">Baseline scale length</label>
-        <input id="calc-base" type="number" min="1" step="1" value="5" inputmode="numeric">
+        <label for="calc-rating">Observed 5-point average</label>
+        <input id="calc-rating" type="number" min="1" max="5" step="0.01" value="4.70" inputmode="decimal">
+        <span>out of 5</span>
       </div>
 
-      <div class="probability-row">
-        <label for="calc-prob">Probability of choosing the lower adjoining option</label>
-        <input id="calc-prob" type="range" min="0" max="100" step="1" value="50">
-        <output id="prob-val" for="calc-prob">50%</output>
+      <p id="distribution" class="distribution"></p>
+
+      <div>
+        <h2>Assumed probability of choosing the lower adjoining option</h2>
+        <div id="probability-grid" class="probability-grid"></div>
+      </div>
+
+      <div class="actions">
         <button id="calculate-button" type="button">Calculate</button>
+        <button id="reset-button" class="secondary" type="button">Reset assumptions</button>
       </div>
     </section>
 
@@ -195,10 +254,10 @@
         <thead>
           <tr>
             <th scope="col">Target scale</th>
-            <th scope="col">Continuous equivalent</th>
-            <th scope="col">Adjoining options</th>
+            <th scope="col">Lower-option probability</th>
             <th scope="col">Expected raw rating</th>
             <th scope="col">Normalized ratio</th>
+            <th scope="col">Change from baseline</th>
           </tr>
         </thead>
         <tbody id="calc-results"></tbody>
@@ -206,22 +265,77 @@
     </div>
 
     <p class="note">
-      The baseline row retains the observed input average. For other scales, the model identifies two adjoining valid response options and calculates their probability-weighted expected value. If the continuous equivalent is an exact integer, the model pairs that value with the adjoining lower option, except at the lower boundary where no lower valid option exists.
+      These probabilities are theoretical assumptions, not empirical estimates. The default schedule is monotonic: 10% at 3 points, 19% at 4, 38% at 6, 47% at 7, 56% at 8, 66% at 9, and 75% at 10. The model first represents the observed 5-point mean as a mixture of its two adjoining 5-point categories, maps each category separately, and then aggregates the expected ratings. Adjust any slider to conduct a sensitivity analysis.
     </p>
   </main>
 
   <script>
+    const DEFAULT_PROBABILITIES = {
+      3: 10,
+      4: 19,
+      6: 38,
+      7: 47,
+      8: 56,
+      9: 66,
+      10: 75
+    };
+
     const ratingInput = document.getElementById('calc-rating');
-    const baseInput = document.getElementById('calc-base');
-    const probabilityInput = document.getElementById('calc-prob');
-    const probabilityOutput = document.getElementById('prob-val');
+    const probabilityGrid = document.getElementById('probability-grid');
+    const distributionText = document.getElementById('distribution');
     const resultsBody = document.getElementById('calc-results');
     const message = document.getElementById('message');
     const calculateButton = document.getElementById('calculate-button');
+    const resetButton = document.getElementById('reset-button');
+
+    function createProbabilityControls() {
+      probabilityGrid.replaceChildren();
+
+      Object.entries(DEFAULT_PROBABILITIES).forEach(([scale, probability]) => {
+        const card = document.createElement('div');
+        card.className = 'probability-card';
+        card.innerHTML = `
+          <div class="probability-card-header">
+            <label for="prob-${scale}">${scale}-point scale</label>
+            <output id="prob-value-${scale}" for="prob-${scale}">${probability}%</output>
+          </div>
+          <input id="prob-${scale}" data-scale="${scale}" type="range" min="0" max="100" step="1" value="${probability}">
+        `;
+        probabilityGrid.appendChild(card);
+      });
+
+      probabilityGrid.querySelectorAll('input[type="range"]').forEach(input => {
+        input.addEventListener('input', calculateMappings);
+      });
+    }
 
     function showMessage(text) {
       message.textContent = text;
       message.style.display = text ? 'block' : 'none';
+    }
+
+    function getBaselineMixture(mean) {
+      const lower = Math.floor(mean);
+      const upper = Math.ceil(mean);
+
+      if (lower === upper) {
+        return [{ category: lower, weight: 1 }];
+      }
+
+      return [
+        { category: lower, weight: upper - mean },
+        { category: upper, weight: mean - lower }
+      ];
+    }
+
+    function describeMixture(mixture) {
+      if (mixture.length === 1) {
+        return `The baseline is treated as 100% of responses at ${mixture[0].category} out of 5.`;
+      }
+
+      const lower = mixture[0];
+      const upper = mixture[1];
+      return `To preserve the observed mean, the model represents it as ${(lower.weight * 100).toFixed(1)}% at ${lower.category}/5 and ${(upper.weight * 100).toFixed(1)}% at ${upper.category}/5.`;
     }
 
     function getAdjoiningOptions(continuousEquivalent, targetScale) {
@@ -240,61 +354,71 @@
 
       lower = Math.max(1, Math.min(targetScale, lower));
       upper = Math.max(1, Math.min(targetScale, upper));
-
       return { lower, upper };
+    }
+
+    function expectedTargetRating(mixture, targetScale, probabilityLower) {
+      return mixture.reduce((total, component) => {
+        const continuousEquivalent = (component.category / 5) * targetScale;
+        const { lower, upper } = getAdjoiningOptions(continuousEquivalent, targetScale);
+        const categoryExpectation = lower === upper
+          ? lower
+          : (probabilityLower * lower) + ((1 - probabilityLower) * upper);
+        return total + (component.weight * categoryExpectation);
+      }, 0);
+    }
+
+    function formatChange(change) {
+      const rounded = Math.abs(change) < 0.0005 ? 0 : change;
+      const sign = rounded > 0 ? '+' : '';
+      return `${sign}${rounded.toFixed(3)}`;
     }
 
     function calculateMappings() {
       const rawRating = Number.parseFloat(ratingInput.value);
-      const baseScale = Number.parseInt(baseInput.value, 10);
-      const probabilityLower = Number.parseInt(probabilityInput.value, 10) / 100;
-      const probabilityUpper = 1 - probabilityLower;
-
-      probabilityOutput.textContent = `${Math.round(probabilityLower * 100)}%`;
       showMessage('');
 
-      if (!Number.isFinite(rawRating) || !Number.isInteger(baseScale) || baseScale < 1) {
-        showMessage('Enter a valid baseline rating and a positive whole-number scale length.');
+      if (!Number.isFinite(rawRating) || rawRating < 1 || rawRating > 5) {
+        showMessage('Enter a valid baseline average between 1 and 5.');
+        distributionText.textContent = '';
         resultsBody.replaceChildren();
         return;
       }
 
-      if (rawRating < 1 || rawRating > baseScale) {
-        showMessage(`The baseline rating must be between 1 and ${baseScale}.`);
-        resultsBody.replaceChildren();
-        return;
-      }
-
-      const baselineRatio = rawRating / baseScale;
+      const baselineRatio = rawRating / 5;
+      const mixture = getBaselineMixture(rawRating);
+      distributionText.textContent = describeMixture(mixture);
       const fragment = document.createDocumentFragment();
 
       for (let targetScale = 3; targetScale <= 10; targetScale += 1) {
         const row = document.createElement('tr');
 
-        if (targetScale === baseScale) {
+        if (targetScale === 5) {
           row.className = 'baseline';
           row.innerHTML = `
-            <td>${targetScale}-point baseline</td>
-            <td>${rawRating.toFixed(3)}</td>
-            <td>Observed average</td>
+            <td>5-point baseline</td>
+            <td>Observed</td>
             <td>${rawRating.toFixed(2)}</td>
             <td>${baselineRatio.toFixed(3)}</td>
+            <td class="same">0.000</td>
           `;
         } else {
-          const continuousEquivalent = baselineRatio * targetScale;
-          const { lower, upper } = getAdjoiningOptions(continuousEquivalent, targetScale);
-          const expectedRaw = lower === upper
-            ? lower
-            : (lower * probabilityLower) + (upper * probabilityUpper);
+          const probabilityInput = document.getElementById(`prob-${targetScale}`);
+          const probabilityOutput = document.getElementById(`prob-value-${targetScale}`);
+          const probabilityLower = Number.parseInt(probabilityInput.value, 10) / 100;
+          probabilityOutput.textContent = `${Math.round(probabilityLower * 100)}%`;
+
+          const expectedRaw = expectedTargetRating(mixture, targetScale, probabilityLower);
           const expectedRatio = expectedRaw / targetScale;
-          const optionsLabel = lower === upper ? `${lower}` : `${lower} and ${upper}`;
+          const change = expectedRatio - baselineRatio;
+          const changeClass = change > 0.0005 ? 'higher' : change < -0.0005 ? 'lower' : 'same';
 
           row.innerHTML = `
             <td>${targetScale}-point</td>
-            <td>${continuousEquivalent.toFixed(3)}</td>
-            <td>${optionsLabel}</td>
+            <td>${Math.round(probabilityLower * 100)}%</td>
             <td>${expectedRaw.toFixed(2)}</td>
             <td>${expectedRatio.toFixed(3)}</td>
+            <td class="${changeClass}">${formatChange(change)}</td>
           `;
         }
 
@@ -304,10 +428,17 @@
       resultsBody.replaceChildren(fragment);
     }
 
-    probabilityInput.addEventListener('input', calculateMappings);
+    function resetAssumptions() {
+      Object.entries(DEFAULT_PROBABILITIES).forEach(([scale, probability]) => {
+        document.getElementById(`prob-${scale}`).value = probability;
+      });
+      calculateMappings();
+    }
+
+    createProbabilityControls();
     ratingInput.addEventListener('input', calculateMappings);
-    baseInput.addEventListener('input', calculateMappings);
     calculateButton.addEventListener('click', calculateMappings);
+    resetButton.addEventListener('click', resetAssumptions);
     calculateMappings();
   </script>
 </body>
